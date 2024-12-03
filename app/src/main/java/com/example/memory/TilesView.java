@@ -1,33 +1,29 @@
 package com.example.memory;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.os.AsyncTask;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
-
 import androidx.annotation.Nullable;
-
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Random;
+
 
 class Card {
-//    Paint p = new Paint();
     Bitmap frontImage;
     Bitmap backImage;
 
     boolean isOpen = false;
-
     float x, y, width, height;
+    float rotationY;
 
     public Card(float x, float y, float width, float height, Bitmap frontImage, Bitmap backImage) {
         this.x = x;
@@ -38,26 +34,61 @@ class Card {
         this.backImage = backImage;
     }
 
-//    int color, backColor = Color.DKGRAY;
+    public void setRotationY(float rotationY)
+    {
+        this.rotationY = rotationY;
+    }
+
 //    boolean isOpen = false; // цвет карты
 //    float x, y, width, height;
 
-    public void draw(Canvas c) {
-        // нарисовать карту в виде цветного прямоугольника
+    public void flipWithAnim(View parentView) {
+        ObjectAnimator animator = ObjectAnimator.ofFloat(this, "rotationY", 0f, 180f);
+        animator.setDuration(150);
 
-        Bitmap toDraw = isOpen ? frontImage: backImage;
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                isOpen = !isOpen;
+                parentView.invalidate((int) x, (int) y, (int) (x + width), (int) (y + height));
+
+                ObjectAnimator animator2 = ObjectAnimator.ofFloat(Card.this, "rotationY", 180f, 360f);
+                animator2.setDuration(150);
+                animator2.addUpdateListener(anim -> { // Изменено имя переменной
+                    rotationY = (float) anim.getAnimatedValue();
+                    parentView.invalidate((int) x, (int) y, (int) (x + width), (int) (y + height));
+                });
+                animator2.start();
+            }
+        });
+
+        animator.addUpdateListener(anim -> { // Изменено имя переменной
+            rotationY = (float) anim.getAnimatedValue();
+            parentView.invalidate((int) x, (int) y, (int) (x + width), (int) (y + height));
+        });
+
+        animator.start();
+    }
+
+    public void draw(Canvas c) {
+        c.save();
+        c.translate(x + width / 2, y + height / 2);
+        c.rotate(rotationY, 0, 0);
+        c.translate(-(x + width / 2), -(y + height / 2));
+
+        Bitmap toDraw = isOpen ? frontImage : backImage;
         c.drawBitmap(toDraw, x, y, null);
 
+        c.restore();
+
+        //        if (isOpen) {
+
+
 //        if (isOpen) {
-//            p.setColor(color);
-//        } else p.setColor(backColor);
-//        c.drawRect(x,y, x+width, y+height, p);
+
     }
-    public boolean flip (float touch_x, float touch_y) {
-        if (touch_x >= x && touch_x <= x + width && touch_y >= y && touch_y <= y + height) {
-            isOpen = ! isOpen;
-            return true;
-        } else return false;
+    public boolean flip(float touch_x, float touch_y) {
+        return touch_x >= x && touch_x <= x + width && touch_y >= y && touch_y <= y + height;
     }
 
 }
@@ -95,17 +126,17 @@ public class TilesView extends View {
 
     private void loadImages(Context context)
     {
-        backImage = BitmapFactory.decodeResource(context.getResources(), R.drawable.im9);
+        backImage = BitmapFactory.decodeResource(context.getResources(), R.drawable.i9);
 
 
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im1));
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im2));
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im3));
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im4));
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im5));
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im6));
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im7));
-        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.im8));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i1));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i2));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i3));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i4));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i5));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i6));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i7));
+        frontImages.add(BitmapFactory.decodeResource(context.getResources(), R.drawable.i8));
     }
 
     @Override
@@ -140,9 +171,12 @@ public class TilesView extends View {
 
                 if (!c.isOpen && c.flip(x, y)) {
 
+                    c.flipWithAnim(this);
+
                     if (openedCard == 0) {
                         firstCard = c;
                         openedCard ++;
+
 //                        if (c.flip(x, y)) {
 //                            Log.d("mytag", "card flipped: " + openedCard);
 //                            openedCard++;
@@ -269,7 +303,7 @@ public class TilesView extends View {
 
             if (cards.isEmpty())
             {
-                Toast.makeText(getContext(), "You win", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Win", Toast.LENGTH_SHORT).show();
             }
 
 
